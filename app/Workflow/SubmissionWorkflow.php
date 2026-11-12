@@ -10,6 +10,7 @@ use Alpha\Journal\Models\EditorialDecision;
 use Alpha\Journal\Models\PlagiarismCheck;
 use Alpha\Journal\Models\Submission;
 use Alpha\Journal\Models\User;
+use Carbon\Carbon;
 use Alpha\Journal\Support\Activity;
 use Alpha\Journal\Workflow\Exceptions\WorkflowAuthorizationException;
 use Alpha\Journal\Workflow\Exceptions\WorkflowTransitionException;
@@ -53,10 +54,23 @@ class SubmissionWorkflow
         ],
         'send_to_production' => ['from' => [SubmissionStage::Copyediting], 'to' => SubmissionStage::Production],
         'publish' => ['from' => [SubmissionStage::Production], 'to' => SubmissionStage::Published],
+        'withdraw' => [
+            'from' => [SubmissionStage::Submission, SubmissionStage::Screening, SubmissionStage::Review],
+            'to' => SubmissionStage::Withdrawn,
+        ],
     ];
 
     /** @var array<string> decisions requiring a second editor's countersign under require_dual_approval */
     private const DUAL_APPROVAL_DECISIONS = ['accept', 'decline'];
+
+    /**
+     * Decisions that send a manuscript round the review loop again.
+     *
+     * Capped because an uncapped loop is the failure these workflows exist to prevent: without a
+     * limit a paper can be revised indefinitely and never be accepted or declined, which is worse
+     * for the author than a decline. Past the cap the editor must choose.
+     */
+    private const REVISION_DECISIONS = ['request_revisions', 'resubmit'];
 
     /**
      * Which decisions are legal for this submission right now — used to render only valid actions
@@ -110,6 +124,7 @@ class SubmissionWorkflow
         $transition = $this->guardTransition($submission, $decision);
         $this->guardStageHasEditor($submission);
         $this->guardScreeningNotSkipped($submission, $decision);
+        $this->guardRevisionRoundCap($submission, $decision);
         $this->guardPlagiarismChecked($submission, $decision);
         $this->guardIssueAssignedForPublish($submission, $decision);
         $this->guardPublicationExistsForPublish($submission, $decision);
@@ -187,6 +202,10 @@ class SubmissionWorkflow
             // editor who declines a returned submission must not leave it flagged as pending an
             // author who no longer has anything to do.
             'returned_to_author_at' => $decision === EditorialDecisionType::ReturnToAuthor ? now() : null,
+
+            // The clock travels with custody, so it can never outlive the thing it measures.
+            'author_due_at' => $this->authorDueAt($submission, $decision),
+            'author_reminded_at' => null,
         ]);
 
         $this->carryEditorsForward($submission, $fromStage, $toStage);
@@ -287,6 +306,56 @@ class SubmissionWorkflow
      * (§3) — a direct POST would otherwise walk a manuscript straight past the check the journal
      * publicly says it performs.
      */
+    /**
+     * How long the author has, once the ball is in their court.
+     *
+     * Returning for corrections and asking for revisions are different asks — a formatting fix is
+     * days, a major revision is weeks — so they get different clocks, both journal-configurable.
+     * Any other decision takes custody back and clears the deadline with it.
+     */
+    private function authorDueAt(Submission $submission, EditorialDecisionType $decision): ?Carbon
+    {
+        $days = match ($decision) {
+            EditorialDecisionType::ReturnToAuthor => (int) $submission->journal->setting('author_correction_days', 14),
+            EditorialDecisionType::RequestRevisions => (int) $submission->journal->setting('author_minor_revision_days', 14),
+            EditorialDecisionType::Resubmit => (int) $submission->journal->setting('author_major_revision_days', 45),
+            default => null,
+        };
+
+        // Zero or negative is a journal switching the clock off, not a deadline in the past.
+        return $days !== null && $days > 0 ? now()->addDays($days) : null;
+    }
+
+    /**
+     * "អតិបរមា ៣ជុំ" — after the cap the editor must accept or decline.
+     *
+     * Counted from completed review rounds rather than from decisions, because that is what the
+     * author experiences as "another round": a fresh set of reviewers on a fresh version. Zero
+     * means unlimited, which is the default, so journals that have not thought about it keep the
+     * behaviour they already had.
+     */
+    private function guardRevisionRoundCap(Submission $submission, EditorialDecisionType $decision): void
+    {
+        if (! in_array($decision->value, self::REVISION_DECISIONS, true)) {
+            return;
+        }
+
+        $cap = (int) $submission->journal->setting('max_revision_rounds', 0);
+
+        if ($cap <= 0) {
+            return;
+        }
+
+        $roundsSoFar = $submission->reviewRounds()->count();
+
+        if ($roundsSoFar >= $cap) {
+            throw new WorkflowTransitionException(
+                "Submission #{$submission->id} has had {$roundsSoFar} review round(s) and this journal allows {$cap}. "
+                .'Accept or decline it rather than asking for another revision.'
+            );
+        }
+    }
+
     private function guardScreeningNotSkipped(Submission $submission, EditorialDecisionType $decision): void
     {
         if ($decision !== EditorialDecisionType::SendToReview) {

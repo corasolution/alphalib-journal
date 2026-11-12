@@ -190,6 +190,41 @@ export default function JournalSettings({ journal, settings, flags, dualApproval
                                 </span>
                             </label>
 
+                            <div className="mt-5 grid gap-4 border-t pt-4">
+                                <div className="grid gap-1">
+                                    <p className="text-sm font-medium">Deadlines and limits</p>
+                                    <p className="text-muted-foreground text-sm">
+                                        How long an author has once the manuscript is back with them, and how many times a paper may go
+                                        round. Leave any of these empty, or set 0, to switch that limit off — which is how the journal
+                                        behaved before these existed.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    {[
+                                        ['author_correction_days', 'Days for corrections', 'After “Returned to the author”.'],
+                                        ['author_minor_revision_days', 'Days for minor revisions', 'After “Revisions requested”.'],
+                                        ['author_major_revision_days', 'Days for major revisions', 'After “Resubmit for review”.'],
+                                        ['author_grace_days', 'Grace days after the reminder', 'Then the submission is withdrawn.'],
+                                        ['max_revision_rounds', 'Maximum review rounds', 'Past this, accept or decline.'],
+                                    ].map(([key, label, hint]) => (
+                                        <div key={key} className="grid gap-2">
+                                            <Label htmlFor={key}>{label}</Label>
+                                            <Input
+                                                id={key}
+                                                type="number"
+                                                min={0}
+                                                value={text(key)}
+                                                onChange={(e) => setData(key, e.target.value)}
+                                                placeholder="Off"
+                                            />
+                                            <p className="text-muted-foreground text-xs">{hint}</p>
+                                            <InputError message={errors[key]} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="mt-5 grid gap-2 border-t pt-4">
                                 <Label htmlFor="final_approval_role">Final approval</Label>
                                 <Select

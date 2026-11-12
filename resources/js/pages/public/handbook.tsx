@@ -618,7 +618,8 @@ export default function Handbook({ site, menuItems, socialLinks }: Props) {
                                 [<B>Send to copyediting</B>, 'Review', 'Copyediting', 'Same move, without recording an acceptance.'],
                                 [<B>Send to production</B>, 'Copyediting', 'Production', 'Text is final; prepare the files.'],
                                 [<B>Publish</B>, 'Production', 'Published', 'Goes live. Editor or Journal Manager only.'],
-                                [<B>Decline</B>, 'Any stage before Published', 'Declined', 'Ends the submission.'],
+                                [<B>Decline</B>, 'Any stage before Published', 'Declined', 'Ends the submission on its merits.'],
+                                [<B>Withdraw</B>, 'Submission, Screening, Review', 'Withdrawn', 'Author stopped replying. Usually automatic.'],
                             ]}
                         />
 
@@ -639,6 +640,35 @@ export default function Handbook({ site, menuItems, socialLinks }: Props) {
                                 This holds even for the named approver. So if you reserve final approval for a role, make sure more than
                                 one person holds it — a decision proposed by its only holder can never be confirmed, and the submission
                                 will sit at <B>Awaiting countersign</B> indefinitely.
+                            </p>
+                        </Note>
+
+                        <H3>Deadlines and round limits</H3>
+                        <P>
+                            A journal can put a clock on the author and a limit on how many times a paper goes round, both in{' '}
+                            <B>Journal → Settings → Workflow</B>. Every one of them is off unless set, so a journal that wants none keeps
+                            the behaviour it has.
+                        </P>
+                        <Fields
+                            rows={[
+                                ['Corrections', 'Days the author has after “Returned to the author”.'],
+                                ['Minor revisions', 'Days after “Revisions requested”.'],
+                                ['Major revisions', 'Days after “Resubmit for review”. Usually longer.'],
+                                ['Grace period', 'Days after the overdue reminder before the submission is withdrawn.'],
+                                ['Maximum rounds', 'Past this, the editor must accept or decline rather than ask again.'],
+                            ]}
+                        />
+                        <P>
+                            When a deadline passes, the author gets <em>one</em> reminder. If the grace period then runs out with no
+                            reply, the submission becomes <B>Withdrawn</B> — recorded as a decision like any other, with its reason. An
+                            editor sees these building up under <B>Author overdue</B> on the dashboard and can act before it gets that
+                            far.
+                        </P>
+                        <Note label="Withdrawn is not declined">
+                            <p>
+                                Declining is a judgement on the work. Withdrawal only means the author stopped replying, and says nothing
+                                about quality — an author is free to submit the work again. The two are kept apart so neither the
+                                journal's record nor the author's misstates what happened.
                             </p>
                         </Note>
 
@@ -1041,7 +1071,8 @@ export default function Handbook({ site, menuItems, socialLinks }: Props) {
                                 [<B>Copyediting</B>, 'Accepted. Text is being finalised.', 'Copyeditor'],
                                 [<B>Production</B>, 'Galley, DOI and issue are being prepared.', 'Layout editor, then the editor'],
                                 [<B>Published</B>, 'Live on the public site.', 'Nobody'],
-                                [<B>Declined</B>, 'Ended. Not published.', 'Nobody'],
+                                [<B>Declined</B>, 'Ended by an editorial judgement on the work.', 'Nobody'],
+                                [<B>Withdrawn</B>, 'Ended because the author stopped replying. Not a judgement.', 'Nobody'],
                             ]}
                         />
 

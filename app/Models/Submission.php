@@ -18,6 +18,7 @@ class Submission extends Model
     protected $fillable = [
         'journal_id', 'section_id', 'issue_id', 'submitted_by', 'stage', 'review_type',
         'current_publication_id', 'submitted_at', 'returned_to_author_at',
+        'author_due_at', 'author_reminded_at',
     ];
 
     protected function casts(): array
@@ -27,6 +28,8 @@ class Submission extends Model
             'review_type' => ReviewType::class,
             'submitted_at' => 'datetime',
             'returned_to_author_at' => 'datetime',
+            'author_due_at' => 'datetime',
+            'author_reminded_at' => 'datetime',
         ];
     }
 

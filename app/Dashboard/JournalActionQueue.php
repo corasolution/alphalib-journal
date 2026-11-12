@@ -27,18 +27,20 @@ class JournalActionQueue
     public const FILTERS = [
         'needs_decision',
         'with_author',
+        'author_overdue',
         'reviews_overdue',
         'awaiting_reviewer_response',
         'no_editor_assigned',
         'ready_to_publish',
     ];
 
-    /** @return array{needsDecision: int, withAuthor: int, reviewsOverdue: int, awaitingReviewerResponse: int, noEditorAssigned: int, readyToPublish: int} */
+    /** @return array{needsDecision: int, withAuthor: int, authorOverdue: int, reviewsOverdue: int, awaitingReviewerResponse: int, noEditorAssigned: int, readyToPublish: int} */
     public function forUser(Journal $journal, User $user): array
     {
         return [
             'needsDecision' => $this->needsDecisionQuery($journal, $user)->count(),
             'withAuthor' => $this->withAuthorQuery()->count(),
+            'authorOverdue' => $this->authorOverdueQuery()->count(),
             'reviewsOverdue' => $this->reviewsOverdueQuery()->count(),
             'awaitingReviewerResponse' => $this->awaitingReviewerResponseQuery()->count(),
             'noEditorAssigned' => $this->noEditorAssignedQuery()->count(),
@@ -56,6 +58,7 @@ class JournalActionQueue
             null, '' => Submission::query(),
             'needs_decision' => $this->needsDecisionQuery($journal, $user),
             'with_author' => $this->withAuthorQuery(),
+            'author_overdue' => $this->authorOverdueQuery(),
             'reviews_overdue' => $this->reviewsOverdueQuery(),
             'awaiting_reviewer_response' => $this->awaitingReviewerResponseQuery(),
             'no_editor_assigned' => $this->noEditorAssignedQuery(),
@@ -69,7 +72,7 @@ class JournalActionQueue
         // A returned manuscript is the author's move, not the editor's. Counting it here was the
         // whole reason for tracking custody separately from stage — an editor's queue that keeps
         // listing work they cannot do is a queue people stop trusting.
-        $query = Submission::whereNotIn('stage', [SubmissionStage::Published->value, SubmissionStage::Declined->value])
+        $query = Submission::whereNotIn('stage', SubmissionStage::terminalValues())
             ->whereNull('returned_to_author_at');
 
         if (! $user->hasRoleOn($journal, JournalRole::Editor)) {
@@ -80,11 +83,25 @@ class JournalActionQueue
         return $query;
     }
 
+    /**
+     * Past the deadline and heading for withdrawal unless somebody intervenes.
+     *
+     * Shown to editors because the sweeper's decision is reversible right up until it fires:
+     * an editor who knows the author is simply slow can extend or chase, and should not first
+     * learn about it from a withdrawal notice.
+     */
+    private function authorOverdueQuery(): Builder
+    {
+        return Submission::whereNotNull('author_due_at')
+            ->where('author_due_at', '<', now())
+            ->whereNotIn('stage', SubmissionStage::terminalValues());
+    }
+
     /** Sitting with the author for corrections — waiting on them, not on the journal. */
     private function withAuthorQuery(): Builder
     {
         return Submission::whereNotNull('returned_to_author_at')
-            ->whereNotIn('stage', [SubmissionStage::Published->value, SubmissionStage::Declined->value]);
+            ->whereNotIn('stage', SubmissionStage::terminalValues());
     }
 
     private function reviewsOverdueQuery(): Builder

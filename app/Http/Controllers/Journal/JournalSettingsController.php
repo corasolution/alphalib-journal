@@ -33,6 +33,9 @@ class JournalSettingsController extends Controller
     private const FIELDS = [
         'publisher', 'issn_online', 'issn_print', 'doi_prefix', 'doi_pattern', 'doaj_api_key',
         'final_approval_role',
+        // Loop termination: how long the author gets, and how many times round.
+        'author_correction_days', 'author_minor_revision_days', 'author_major_revision_days',
+        'author_grace_days', 'max_revision_rounds',
     ];
 
     /** Settings stored as booleans rather than strings, so an unchecked box persists as false. */
@@ -84,6 +87,13 @@ class JournalSettingsController extends Controller
             // Only the two roles that carry journal-wide authority; a Section or Guest Editor
             // signing off the journal's own acceptances would defeat the point of naming one.
             'final_approval_role' => ['nullable', Rule::in([JournalRole::Editor->value, JournalRole::JournalManager->value])],
+            // 0 means off — an unlimited clock or unlimited rounds, which is what every
+            // journal had before this existed, so leaving them blank changes nothing.
+            'author_correction_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'author_minor_revision_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'author_major_revision_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'author_grace_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'max_revision_rounds' => ['nullable', 'integer', 'min:0', 'max:20'],
         ], [
             'issn_online.regex' => 'An ISSN looks like 2789-1234 — eight digits, hyphenated, with X allowed as the last character.',
             'issn_print.regex' => 'An ISSN looks like 2789-1234 — eight digits, hyphenated, with X allowed as the last character.',

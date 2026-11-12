@@ -28,6 +28,15 @@ enum EditorialDecisionType: string
     case Publish = 'publish';
 
     /**
+     * Closing a submission the author has stopped answering on.
+     *
+     * Separate from Decline because it is not a judgement on the work. Usually recorded by
+     * the deadline sweeper rather than a person, but available by hand for the author who
+     * writes in to ask for their paper back.
+     */
+    case Withdraw = 'withdraw';
+
+    /**
      * Publish is a separate, higher-privilege action from accept (§4.1) — Editor or Journal
      * Manager only, never Section Editor.
      */
@@ -55,6 +64,7 @@ enum EditorialDecisionType: string
             self::SendToCopyediting => 'Sent to copyediting',
             self::SendToProduction => 'Sent to production',
             self::Publish => 'Published',
+            self::Withdraw => 'Withdrawn',
         };
     }
 }
