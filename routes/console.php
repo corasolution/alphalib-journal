@@ -12,6 +12,7 @@ Artisan::command('inspire', function () {
 Schedule::command('journal:send-reviewer-reminders')->daily();
 Schedule::command('journal:escalate-overdue-reviews')->daily();
 Schedule::command('journal:alert-unclaimed-submissions')->daily();
+Schedule::command('journal:sweep-overdue-author-revisions')->daily();
 
 // Scheduled BagIt/OAIS export to R2 as an institutional dark archive (CLAUDE.md §5.5).
 Schedule::command('journal:export-preservation-bags')->daily();

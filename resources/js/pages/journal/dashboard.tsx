@@ -5,11 +5,12 @@ import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { AlertTriangle, BookOpen, CheckCircle2, ChevronRight, Clock, Download, FileText, Inbox, Settings, Undo2, Users, UserX } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarX, CheckCircle2, ChevronRight, Clock, Download, FileText, Inbox, Settings, Undo2, Users, UserX } from 'lucide-react';
 
 interface JournalActionQueue {
     needsDecision: number;
     withAuthor: number;
+    authorOverdue: number;
     reviewsOverdue: number;
     awaitingReviewerResponse: number;
     noEditorAssigned: number;
@@ -55,6 +56,14 @@ const ROWS: QueueRow[] = [
         label: 'Reviews overdue',
         description: 'Accepted review assignments past their due date.',
         icon: AlertTriangle,
+        severity: 'critical',
+    },
+    {
+        key: 'authorOverdue',
+        filter: 'author_overdue',
+        label: 'Author overdue',
+        description: 'Past the revision deadline — these are withdrawn if nobody steps in.',
+        icon: CalendarX,
         severity: 'critical',
     },
     {
